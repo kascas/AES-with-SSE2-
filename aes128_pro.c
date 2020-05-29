@@ -371,7 +371,7 @@ int main()
     uint32 k[4] = {0x0f1571c9, 0x47d9e859, 0x0cb7add6, 0xaf7f6798};
     uint8 m[16] = {0x10, 0x32, 0x54, 0x76, 0x98, 0xba, 0xdc, 0xfe, 0xef, 0xcd, 0xab, 0x89, 0x67, 0x45, 0x23, 0x01};
 
-    __m128i state, tmp;
+    __m128i state;
     clock_t start, end;
 
     /*
@@ -404,46 +404,31 @@ int main()
         keygen(k);
     end = clock();
     printf("keygen: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
-
-    uint8 a[16] = {0x10, 0x32, 0x54, 0x76, 0x98, 0xba, 0xdc, 0xfe, 0xef, 0xcd, 0xab, 0x89, 0x67, 0x45, 0x23, 0x01};
-    uint8 b[16] = {0};
-    start = clock();
-    for (register int j = 0; j < 1000000; j++)
-        for (register int i = 0; i < 16; i++)
-            b[16 - i] = a[i];
-    end = clock();
-    printf("reverse: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
 */
 
     keygen(k);
-    state = encrypt(m);
-    uint8 *c = (uint8 *)&state;
+    start = clock();
+    for (int i = 0; i < 1000000; i++)
+        state = encrypt(m);
+    end = clock();
+    printf("encrypt 10^6 times: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
+
+    uint8 *s = (uint8 *)&state;
+    uint8 c[16] = {0};
     for (int i = 0; i < 16; i++)
-    {
-        uint8 tmp = c[i];
-        c[i] = c[15 - i];
-        c[15 - i] = tmp;
-    }
+        c[i] = s[i];
+
     inv_keygen(k);
     start = clock();
-    //for (register int i = 0; i < 1000000; i++)
-    state = decrypt(c);
+    for (int i = 0; i < 1000000; i++)
+        state = decrypt(c);
     end = clock();
-    printf("decrypt: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
+    printf("decrypt 10^6 times: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
 
     uint8 *r = (uint8 *)&state;
     for (j = 0; j < 16; j++)
         printf("%02x ", r[j]);
     printf("\n");
-
-    for (int i = 0; i < 256; i++)
-    {
-        for (int j = 0; j < 16; j++)
-        {
-            printf("0x%02x ", gfmul(i, j));
-        }
-        printf("\n");
-    }
 
     system("pause");
     return 0;
