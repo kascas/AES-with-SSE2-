@@ -101,34 +101,27 @@ uint32 S_04[256] = {
 uint32 RC[10] = {0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000,
                  0x20000000, 0x40000000, 0x80000000, 0x1b000000, 0x36000000};
 
-#define table(REG, s)                                                                 \
-    {                                                                                 \
-        REG[15] = S[s[15]], REG[14] = S[s[10]], REG[13] = S[s[5]], REG[12] = S[s[0]]; \
-        REG[11] = S[s[11]], REG[10] = S[s[6]], REG[9] = S[s[1]], REG[8] = S[s[12]];   \
-        REG[7] = S[s[7]], REG[6] = S[s[2]], REG[5] = S[s[13]], REG[4] = S[s[8]];      \
-        REG[3] = S[s[3]], REG[2] = S[s[14]], REG[1] = S[s[9]], REG[0] = S[s[4]];      \
-    }
-
 __m128i KEY[11];
 
-void ssma(__m128i *state, __m128i key)
+void ssma(__m128i *state, int round)
 {
     uint8 *s = (uint8 *)state;
     __m128i R = _mm_set_epi32(S_01[s[15]] ^ S_02[s[10]] ^ S_03[s[5]] ^ S_04[s[0]],
                               S_01[s[11]] ^ S_02[s[6]] ^ S_03[s[1]] ^ S_04[s[12]],
                               S_01[s[7]] ^ S_02[s[2]] ^ S_03[s[13]] ^ S_04[s[8]],
                               S_01[s[3]] ^ S_02[s[14]] ^ S_03[s[9]] ^ S_04[s[4]]);
-    *state = _mm_xor_si128(R, key);
+    *state = _mm_xor_si128(R, KEY[round]);
     return;
 }
 
-void ssa(__m128i *state, __m128i key)
+void ssa(__m128i *state)
 {
     uint8 *s = (uint8 *)state;
-    uint8 REG[16] = {0};
-    table(REG, s);
-    *state = _mm_loadu_si128((__m128i *)REG);
-    *state = _mm_xor_si128(*state, key);
+    __m128i R = _mm_set_epi8(S[s[15]], S[s[10]], S[s[5]], S[s[0]],
+                             S[s[11]], S[s[6]], S[s[1]], S[s[12]],
+                             S[s[7]], S[s[2]], S[s[13]], S[s[8]],
+                             S[s[3]], S[s[14]], S[s[9]], S[s[4]]);
+    *state = _mm_xor_si128(R, KEY[10]);
     return;
 }
 
@@ -137,7 +130,7 @@ void keygen(uint32 *key)
     uint32 w[44] = {0}, tmp;
     w[0] = key[0], w[1] = key[1], w[2] = key[2], w[3] = key[3];
     KEY[0] = _mm_set_epi32(w[0], w[1], w[2], w[3]);
-    for (int i = 4; i < 44; i++)
+    for (register int i = 4; i < 44; i++)
     {
         if (!(i & 3)) //if i%4==0
             w[i] = (S[w[i - 1] >> 24] | (S[(w[i - 1] >> 16) & 0xff] << 24) | (S[(w[i - 1] >> 8) & 0xff] << 16) | (S[w[i - 1] & 0xff] << 8)) ^ RC[i / 4 - 1] ^ w[i - 4];
@@ -155,16 +148,16 @@ __m128i encrypt(uint8 *m)
 {
     __m128i state = _mm_loadu_si128((__m128i *)m);
     state = _mm_xor_si128(state, KEY[0]);
-    ssma(&state, KEY[1]);
-    ssma(&state, KEY[2]);
-    ssma(&state, KEY[3]);
-    ssma(&state, KEY[4]);
-    ssma(&state, KEY[5]);
-    ssma(&state, KEY[6]);
-    ssma(&state, KEY[7]);
-    ssma(&state, KEY[8]);
-    ssma(&state, KEY[9]);
-    ssa(&state, KEY[10]);
+    ssma(&state, 1);
+    ssma(&state, 2);
+    ssma(&state, 3);
+    ssma(&state, 4);
+    ssma(&state, 5);
+    ssma(&state, 6);
+    ssma(&state, 7);
+    ssma(&state, 8);
+    ssma(&state, 9);
+    ssa(&state);
     return state;
 }
 
@@ -179,7 +172,7 @@ int main()
     clock_t start, end;
 
     start = clock();
-    for (int i = 0; i < 1000000; i++)
+    for (register int i = 0; i < 10000000; i++)
         state = encrypt(m);
     end = clock();
     printf("encrypt: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
@@ -190,22 +183,31 @@ int main()
     printf("\n");
 
     start = clock();
-    for (int i = 0; i < 10000000; i++)
-        ssma(&state, KEY[0]);
+    for (register int i = 0; i < 10000000; i++)
+        ssma(&state, 0);
     end = clock();
     printf("ssma: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
 
     start = clock();
-    for (int i = 0; i < 1000000; i++)
-        ssa(&state, KEY[0]);
+    for (register int i = 0; i < 1000000; i++)
+        ssa(&state);
     end = clock();
     printf("ssa: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
 
     start = clock();
-    for (int i = 0; i < 1000000; i++)
+    for (register int i = 0; i < 1000000; i++)
         keygen(k);
     end = clock();
     printf("keygen: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
+
+    uint8 a[16] = {0x10, 0x32, 0x54, 0x76, 0x98, 0xba, 0xdc, 0xfe, 0xef, 0xcd, 0xab, 0x89, 0x67, 0x45, 0x23, 0x01};
+    uint8 b[16] = {0};
+    start = clock();
+    for (register int j = 0; j < 10000000; j++)
+        for (register int i = 0; i < 16; i++)
+            b[16 - i] = a[i];
+    end = clock();
+    printf("reverse: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
 
     system("pause");
     return 0;
