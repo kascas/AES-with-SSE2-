@@ -390,79 +390,38 @@ int main()
 
     __m128i state;
     clock_t start, end;
-
-    /*
+    /////////////////////////////////////////////////////////////////////////////////
+    //encrypt
     keygen(k);
-    start = clock();
-    for (register int i = 0; i < 1000000; i++)
-        state = encrypt(m);
-    end = clock();
-    printf("encrypt: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
-
-    uint8 *r = (uint8 *)&state;
-    for (j = 0; j < 16; j++)
-        printf("%02x ", r[j]);
-    printf("\n");
-
-    start = clock();
-    for (register int i = 0; i < 10000000; i++)
-        ssma(&state, 0);
-    end = clock();
-    printf("ssma: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
-
-    start = clock();
-    for (register int i = 0; i < 1000000; i++)
-        ssa(&state);
-    end = clock();
-    printf("ssa: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
-
-    start = clock();
-    for (register int i = 0; i < 1000000; i++)
-        keygen(k);
-    end = clock();
-    printf("keygen: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
-*/
-
-    keygen(k);
-
-    for (int i = 0; i < 11; i++)
-    {
-        uint8 *r = (uint8 *)&KEY[i];
-        for (j = 0; j < 16; j++)
-            printf("%02x ", r[j]);
-        printf("\n");
-    }
-
-    printf("\n");
-
     start = clock();
     for (int i = 0; i < 1000000; i++)
-        state = encrypt(m);
+        state = encrypt(m); //encrypt
     end = clock();
     printf("encrypt 10^6 times: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
-
+    //output ciphertext
     uint8 *r = (uint8 *)&state;
     for (j = 0; j < 16; j++)
         printf("%02x ", r[j]);
     printf("\n");
-
+    /////////////////////////////////////////////////////////////////////////////////
+    //copy ciphertest for decrypt
     uint8 *s = (uint8 *)&state;
     uint8 c[16] = {0};
     for (int i = 0; i < 16; i++)
         c[i] = s[i];
-
+    //decrypt
     inv_keygen(k);
     start = clock();
     for (int i = 0; i < 1000000; i++)
-        state = decrypt(c);
+        state = decrypt(c); //decrypt
     end = clock();
     printf("decrypt 10^6 times: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
-
+    //output message
     uint8 *t = (uint8 *)&state;
     for (j = 0; j < 16; j++)
         printf("%02x ", t[j]);
     printf("\n");
-
+    /////////////////////////////////////////////////////////////////////////////////
     system("pause");
     return 0;
 }
