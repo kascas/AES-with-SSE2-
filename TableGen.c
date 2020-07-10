@@ -1,12 +1,8 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <immintrin.h>
 #include <emmintrin.h>
-#include <time.h>
+#include <stdio.h>
 
 typedef unsigned char uint8;
-typedef unsigned int uint32;
 
 uint8 S_BOX_01[256] = {
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
@@ -134,163 +130,15 @@ uint8 S_BOX_I_0E[256] = {
     0x9a, 0x37, 0x59, 0xeb, 0xce, 0xb7, 0xe1, 0x7a, 0x9c, 0x55, 0x18, 0x73, 0x53, 0x5f, 0xdf, 0x78,
     0xca, 0xb9, 0x38, 0xc2, 0x16, 0xbc, 0x28, 0xff, 0x39, 0x08, 0xd8, 0x64, 0x7b, 0xd5, 0x48, 0xd0};
 
-uint32 RC[10] = {0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000,
-                 0x20000000, 0x40000000, 0x80000000, 0x1b000000, 0x36000000};
-
-#define table1(REG1, s1, s2, s3, s4)                                                                        \
-    {                                                                                                       \
-        REG1[15] = S_BOX_02[s1], REG1[14] = S_BOX_01[s1], REG1[13] = S_BOX_01[s1], REG1[12] = S_BOX_03[s1]; \
-        REG1[11] = S_BOX_02[s2], REG1[10] = S_BOX_01[s2], REG1[9] = S_BOX_01[s2], REG1[8] = S_BOX_03[s2];   \
-        REG1[7] = S_BOX_02[s3], REG1[6] = S_BOX_01[s3], REG1[5] = S_BOX_01[s3], REG1[4] = S_BOX_03[s3];     \
-        REG1[3] = S_BOX_02[s4], REG1[2] = S_BOX_01[s4], REG1[1] = S_BOX_01[s4], REG1[0] = S_BOX_03[s4];     \
-    }
-
-#define table2(REG2, s1, s2, s3, s4)                                                                        \
-    {                                                                                                       \
-        REG2[15] = S_BOX_03[s1], REG2[14] = S_BOX_02[s1], REG2[13] = S_BOX_01[s1], REG2[12] = S_BOX_01[s1]; \
-        REG2[11] = S_BOX_03[s2], REG2[10] = S_BOX_02[s2], REG2[9] = S_BOX_01[s2], REG2[8] = S_BOX_01[s2];   \
-        REG2[7] = S_BOX_03[s3], REG2[6] = S_BOX_02[s3], REG2[5] = S_BOX_01[s3], REG2[4] = S_BOX_01[s3];     \
-        REG2[3] = S_BOX_03[s4], REG2[2] = S_BOX_02[s4], REG2[1] = S_BOX_01[s4], REG2[0] = S_BOX_01[s4];     \
-    }
-
-#define table3(REG3, s1, s2, s3, s4)                                                                        \
-    {                                                                                                       \
-        REG3[15] = S_BOX_01[s1], REG3[14] = S_BOX_03[s1], REG3[13] = S_BOX_02[s1], REG3[12] = S_BOX_01[s1]; \
-        REG3[11] = S_BOX_01[s2], REG3[10] = S_BOX_03[s2], REG3[9] = S_BOX_02[s2], REG3[8] = S_BOX_01[s2];   \
-        REG3[7] = S_BOX_01[s3], REG3[6] = S_BOX_03[s3], REG3[5] = S_BOX_02[s3], REG3[4] = S_BOX_01[s3];     \
-        REG3[3] = S_BOX_01[s4], REG3[2] = S_BOX_03[s4], REG3[1] = S_BOX_02[s4], REG3[0] = S_BOX_01[s4];     \
-    }
-
-#define table4(REG4, s1, s2, s3, s4)                                                                        \
-    {                                                                                                       \
-        REG4[15] = S_BOX_01[s1], REG4[14] = S_BOX_01[s1], REG4[13] = S_BOX_03[s1], REG4[12] = S_BOX_02[s1]; \
-        REG4[11] = S_BOX_01[s2], REG4[10] = S_BOX_01[s2], REG4[9] = S_BOX_03[s2], REG4[8] = S_BOX_02[s2];   \
-        REG4[7] = S_BOX_01[s3], REG4[6] = S_BOX_01[s3], REG4[5] = S_BOX_03[s3], REG4[4] = S_BOX_02[s3];     \
-        REG4[3] = S_BOX_01[s4], REG4[2] = S_BOX_01[s4], REG4[1] = S_BOX_03[s4], REG4[0] = S_BOX_02[s4];     \
-    }
-
-#define table(REG, s)                                                                                             \
-    {                                                                                                             \
-        REG[15] = S_BOX_01[s[15]], REG[14] = S_BOX_01[s[10]], REG[13] = S_BOX_01[s[5]], REG[12] = S_BOX_01[s[0]]; \
-        REG[11] = S_BOX_01[s[11]], REG[10] = S_BOX_01[s[6]], REG[9] = S_BOX_01[s[1]], REG[8] = S_BOX_01[s[12]];   \
-        REG[7] = S_BOX_01[s[7]], REG[6] = S_BOX_01[s[2]], REG[5] = S_BOX_01[s[13]], REG[4] = S_BOX_01[s[8]];      \
-        REG[3] = S_BOX_01[s[3]], REG[2] = S_BOX_01[s[14]], REG[1] = S_BOX_01[s[9]], REG[0] = S_BOX_01[s[4]];      \
-    }
-
-#define rotword(word) ((word << 8) + (word >> 24))
-__m128i KEY[11];
-
-__m128i ssma(__m128i state, __m128i key)
-{
-    uint8 *s = (uint8 *)&state;
-    uint8 REG1[16] = {0}, REG2[16] = {0}, REG3[16] = {0}, REG4[16] = {0};
-    table1(REG1, s[15], s[11], s[7], s[3]);
-    table2(REG2, s[10], s[6], s[2], s[14]);
-    table3(REG3, s[5], s[1], s[13], s[9]);
-    table4(REG4, s[0], s[12], s[8], s[4]);
-    __m128i R1 = _mm_loadu_si128((__m128i *)REG1);
-    __m128i R2 = _mm_loadu_si128((__m128i *)REG2);
-    __m128i R3 = _mm_loadu_si128((__m128i *)REG3);
-    __m128i R4 = _mm_loadu_si128((__m128i *)REG4);
-    __m128i t1 = _mm_xor_si128(R1, R2);
-    __m128i t2 = _mm_xor_si128(R3, R4);
-    __m128i t3 = _mm_xor_si128(t1, t2);
-    __m128i t4 = _mm_xor_si128(t3, key);
-    return t4;
-}
-
-__m128i ssa(__m128i state, __m128i key)
-{
-    uint8 *s = (uint8 *)&state;
-    uint8 REG1[16] = {0};
-    table(REG1, s);
-    __m128i R1 = _mm_loadu_si128((__m128i *)REG1);
-    __m128i t1 = _mm_xor_si128(R1, key);
-    return t1;
-}
-
-uint32 Key_Sub(uint32 w)
-{
-    uint8 byte = 0;
-    uint32 result = 0, i = 0;
-    for (i = 0; i < 4; i++)
-    {
-        byte = (w >> ((3 - i) * 8)) & 0xff;
-        byte = S_BOX_01[byte];
-        result = (result << 8) + byte;
-    }
-    return result;
-}
-
-void keygen(uint32 *key)
-{
-    int i = 0;
-    uint32 w[44] = {0}, tmp = 0;
-    w[0] = key[0], w[1] = key[1], w[2] = key[2], w[3] = key[3];
-    for (int i = 4; i < 44; i++)
-    {
-        tmp = w[i - 1];
-        if (i % 4 == 0)
-            tmp = Key_Sub(rotword(w[i - 1])) ^ (RC[i / 4 - 1]);
-        w[i] = tmp ^ w[i - 4];
-    }
-    for (i = 0; i < 11; i++)
-        KEY[i] = _mm_set_epi32(w[4 * i], w[4 * i + 1], w[4 * i + 2], w[4 * i + 3]);
-    return;
-}
-
-__m128i encrypt(uint8 *m, uint32 *key)
-{
-    __m128i state = _mm_loadu_si128((__m128i *)m);
-    keygen(key);
-    state = _mm_xor_si128(state, KEY[0]);
-    int i = 0;
-    for (i = 1; i < 10; i++)
-        state = ssma(state, KEY[i]);
-    state = ssa(state, KEY[10]);
-    return state;
-}
-
 int main()
 {
-    int i = 0, j = 0;
-    uint32 k[4] = {0x0f1571c9, 0x47d9e859, 0x0cb7add6, 0xaf7f6798};
-    uint8 m[16] = {0x10, 0x32, 0x54, 0x76, 0x98, 0xba, 0xdc, 0xfe, 0xef, 0xcd, 0xab, 0x89, 0x67, 0x45, 0x23, 0x01};
-
-    __m128i state, tmp;
-    clock_t start, end;
-
-    start = clock();
-    for (int i = 0; i < 1000000; i++)
-        state = encrypt(m, k);
-    end = clock();
-    printf("encrypt: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
-
-    start = clock();
-    for (int i = 0; i < 10000000; i++)
-        tmp = ssma(state, KEY[0]);
-    end = clock();
-    printf("ssma: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
-
-    start = clock();
-    for (int i = 0; i < 1000000; i++)
-        tmp = ssa(state, KEY[0]);
-    end = clock();
-    printf("ssa: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
-
-    start = clock();
-    for (int i = 0; i < 1000000; i++)
-        keygen(k);
-    end = clock();
-    printf("keygen: %lf s\n", (double)(end - start) / CLOCKS_PER_SEC);
-
-    uint8 *r = (uint8 *)&state;
-    for (j = 0; j < 16; j++)
-        printf("%02x ", r[j]);
-    printf("\n");
-
+    int i = 0, j = 0, k = 0;
+    for (i = 0; i < 256; i++)
+    {
+        printf("0x%02x%02x%02x%02x, ", S_BOX_I_0E[i], S_BOX_I_0B[i], S_BOX_I_0D[i], S_BOX_I_09[i]);
+        if (i % 16 == 15)
+            printf("\n");
+    }
     system("pause");
     return 0;
 }
-
-//密文： ff0b844a0853bf7c6934ab4364148fb9
